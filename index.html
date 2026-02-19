@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Chat</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #1a1a2e;
+            color: #eaeaea;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            background-color: #0a0a1a;
+            border-bottom: 1px solid #16213e;
+            flex-shrink: 0;
+        }
+        .icon-button {
+            background: none;
+            border: none;
+            color: #eaeaea;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.35rem 0.5rem;
+            border-radius: 0.25rem;
+            line-height: 1;
+        }
+        .icon-button:hover { background-color: #16213e; }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .message-wrapper {
+            display: flex;
+        }
+        .message-wrapper.user  { justify-content: flex-end; }
+        .message-wrapper.assistant { justify-content: flex-start; }
+
+        .user-message, .assistant-message {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            max-width: 80%;
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .user-message {
+            background-color: #16213e;
+            border-bottom-right-radius: 0.2rem;
+        }
+        .assistant-message {
+            background-color: #0f3460;
+            border-bottom-left-radius: 0.2rem;
+        }
+        .error-message {
+            color: #ff6b6b;
+            white-space: pre-wrap;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            padding: 2px 0;
+        }
+        .loading-dots span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: #eaeaea;
+            animation: bounce 1.2s ease-in-out infinite;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.6; }
+            40%            { transform: translateY(-6px); opacity: 1; }
+        }
+
+        .input-container {
+            display: flex;
+            border-top: 1px solid #16213e;
+            background-color: #0a0a1a;
+            flex-shrink: 0;
+        }
+        .input-field {
+            flex: 1;
+            padding: 0.75rem;
+            background-color: #0a0a1a;
+            color: #eaeaea;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        .input-field::placeholder { color: #555; }
+        .send-button {
+            padding: 0.75rem 1rem;
+            background-color: #0f3460;
+            color: #eaeaea;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.15s;
+        }
+        .send-button:hover:not(:disabled) { background-color: #16213e; }
+        .send-button:disabled, .input-field:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-content {
+            background-color: #1a1a2e;
+            border: 1px solid #16213e;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .modal-content form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .modal-content h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #eaeaea;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #0a0a1a;
+            color: #eaeaea;
+            border: 1px solid #0f3460;
+            border-radius: 0.4rem;
+            outline: none;
+            font-size: 1rem;
+            font-family: monospace;
+        }
+        .modal-input:focus { border-color: #eaeaea; }
+        .modal-button {
+            padding: 0.75rem;
+            background-color: #0f3460;
+            color: #eaeaea;
+            border: none;
+            border-radius: 0.4rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.15s;
+        }
+        .modal-button:hover { background-color: #16213e; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <header class="app-header">
+        <button class="icon-button" id="clearBtn"    title="Clear chat"    onclick="clearChat()">🗑</button>
+        <button class="icon-button" id="settingsBtn" title="Settings"      onclick="openSettings()">⚙</button>
+    </header>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="input-container">
+        <input  type="text"  class="input-field"  id="inputField"  placeholder="Type a message…" autocomplete="off">
+        <button class="send-button" id="sendBtn" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-label="API Key Settings">
+    <div class="modal-content">
+        <h2>⚙ Groq API Key</h2>
+        <form onsubmit="saveApiKey(); return false;">
+            <input type="password" class="modal-input" id="apiKeyInput" placeholder="gsk_…" autocomplete="current-password" spellcheck="false">
+            <button type="submit" class="modal-button">Save</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const conversationHistory = [];
+    let apiKey = localStorage.getItem('groq_api_key') || '';
+
+    const messagesEl   = document.getElementById('messages');
+    const inputField   = document.getElementById('inputField');
+    const sendBtn      = document.getElementById('sendBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+
+    if (!apiKey) openSettings();
+
+    async function sendMessage() {
+        const text = inputField.value.trim();
+        if (!text) return;
+
+        if (!apiKey) {
+            openSettings();
+            return;
+        }
+
+        conversationHistory.push({ role: 'user', content: text });
+        appendBubble('user', text);
+        inputField.value = '';
+
+        const loadingEl = appendLoadingBubble();
+        setInputEnabled(false);
+
+        const messages = [
+            {
+                role: 'system',
+                content: 'You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information.'
+            },
+            ...conversationHistory
+        ];
+
+        try {
+            const response = await fetch('/api', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: messages,
+                    temperature: 0.7,
+                    max_completion_tokens: 2048,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                let errMsg;
+                if (response.status === 429) {
+                    errMsg = 'Rate limit reached — wait a moment and try again.';
+                } else {
+                    try {
+                        const errBody = await response.json();
+                        errMsg = (errBody && errBody.error && errBody.error.message) || ('API error ' + response.status + ': ' + response.statusText);
+                    } catch (e) {
+                        errMsg = 'API error ' + response.status + ': ' + response.statusText;
+                    }
+                }
+                replaceLoadingWithError(loadingEl, errMsg);
+                return;
+            }
+
+            const data = await response.json();
+            const replyContent = data.choices[0].message.content;
+
+            conversationHistory.push({ role: 'assistant', content: replyContent });
+            replaceLoadingWithContent(loadingEl, replyContent);
+
+        } catch (err) {
+            let netMsg;
+            if (err instanceof TypeError) {
+                netMsg = 'Network error — check your connection.';
+            } else {
+                netMsg = 'Unexpected error: ' + err.message;
+            }
+            replaceLoadingWithError(loadingEl, netMsg);
+        } finally {
+            setInputEnabled(true);
+            inputField.focus();
+            scrollToBottom();
+        }
+    }
+
+    function appendBubble(role, content, isError) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper ' + role;
+
+        const bubble = document.createElement('div');
+        bubble.className = (role === 'user' ? 'user-message' : 'assistant-message') + (isError ? ' error-message' : '');
+        bubble.textContent = content;
+
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        scrollToBottom();
+        return wrapper;
+    }
+
+    function appendLoadingBubble() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper assistant';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'assistant-message';
+        bubble.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        scrollToBottom();
+        return wrapper;
+    }
+
+    function replaceLoadingWithContent(wrapperEl, content) {
+        var bubble = wrapperEl.querySelector('.assistant-message');
+        bubble.textContent = content;
+    }
+
+    function replaceLoadingWithError(wrapperEl, errMsg) {
+        var bubble = wrapperEl.querySelector('.assistant-message');
+        bubble.classList.add('error-message');
+        bubble.textContent = errMsg;
+    }
+
+    function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setInputEnabled(enabled) {
+        inputField.disabled = !enabled;
+        sendBtn.disabled    = !enabled;
+    }
+
+    function clearChat() {
+        conversationHistory.length = 0;
+        messagesEl.innerHTML = '';
+        inputField.value     = '';
+    }
+
+    function openSettings() {
+        document.getElementById('apiKeyInput').value = apiKey;
+        modalOverlay.classList.add('open');
+        setTimeout(function() { document.getElementById('apiKeyInput').focus(); }, 50);
+    }
+
+    function saveApiKey() {
+        var val = document.getElementById('apiKeyInput').value.trim();
+        if (!val) {
+            alert('Please enter a valid API key.');
+            return;
+        }
+        apiKey = val;
+        localStorage.setItem('groq_api_key', apiKey);
+        modalOverlay.classList.remove('open');
+        inputField.focus();
+    }
+
+    inputField.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    document.getElementById('apiKeyInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') saveApiKey();
+        if (e.key === 'Escape') modalOverlay.classList.remove('open');
+    });
+
+    (function injectManifest() {
+        var manifest = {
+            name:             'Chat',
+            short_name:       'Chat',
+            start_url:        '.',
+            display:          'standalone',
+            background_color: '#1a1a2e',
+            theme_color:      '#0f3460'
+        };
+        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        var url  = URL.createObjectURL(blob);
+        var link = document.createElement('link');
+        link.rel   = 'manifest';
+        link.href  = url;
+        document.head.appendChild(link);
+    })();
+
+    if ('serviceWorker' in navigator) {
+        try {
+            var swCode = 'var CACHE="chat-pwa-v1";self.addEventListener("install",function(e){self.skipWaiting()});self.addEventListener("activate",function(e){e.waitUntil(self.clients.claim())});self.addEventListener("fetch",function(e){if(e.request.url.indexOf("api.groq.com")!==-1){return}e.respondWith(caches.match(e.request).then(function(r){return r||fetch(e.request)}))})';
+            var swBlob = new Blob([swCode], { type: 'application/javascript' });
+            var swUrl  = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swUrl, { scope: '/' })
+                .then(function(reg) { console.log('SW registered'); })
+                .catch(function(err) { console.warn('SW registration skipped:', err.message); });
+        } catch (e) {
+            console.warn('SW setup skipped');
+        }
+    }
+</script>
+
+</body>
+</html>
