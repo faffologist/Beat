@@ -7,403 +7,231 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Chat</title>
     <style>
-        *, *::before, *::after { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #1a1a2e;
-            color: #eaeaea;
-        }
-
-        .app-header {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.5rem 0.75rem;
-            background-color: #0a0a1a;
-            border-bottom: 1px solid #16213e;
-            flex-shrink: 0;
-        }
-        .icon-button {
-            background: none;
-            border: none;
-            color: #eaeaea;
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 0.35rem 0.5rem;
-            border-radius: 0.25rem;
-            line-height: 1;
-        }
-        .icon-button:hover { background-color: #16213e; }
-
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .message-wrapper {
-            display: flex;
-        }
-        .message-wrapper.user  { justify-content: flex-end; }
-        .message-wrapper.assistant { justify-content: flex-start; }
-
-        .user-message, .assistant-message {
-            padding: 0.75rem 1rem;
-            border-radius: 0.75rem;
-            max-width: 80%;
-            word-break: break-word;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-        .user-message {
-            background-color: #16213e;
-            border-bottom-right-radius: 0.2rem;
-        }
-        .assistant-message {
-            background-color: #0f3460;
-            border-bottom-left-radius: 0.2rem;
-        }
-        .error-message {
-            color: #ff6b6b;
-            white-space: pre-wrap;
-        }
-
-        .loading-dots {
-            display: inline-flex;
-            gap: 4px;
-            align-items: center;
-            padding: 2px 0;
-        }
-        .loading-dots span {
-            display: inline-block;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background-color: #eaeaea;
-            animation: bounce 1.2s ease-in-out infinite;
-        }
-        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-            0%, 80%, 100% { transform: translateY(0); opacity: 0.6; }
-            40%            { transform: translateY(-6px); opacity: 1; }
-        }
-
-        .input-container {
-            display: flex;
-            border-top: 1px solid #16213e;
-            background-color: #0a0a1a;
-            flex-shrink: 0;
-        }
-        .input-field {
-            flex: 1;
-            padding: 0.75rem;
-            background-color: #0a0a1a;
-            color: #eaeaea;
-            border: none;
-            outline: none;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-        .input-field::placeholder { color: #555; }
-        .send-button {
-            padding: 0.75rem 1rem;
-            background-color: #0f3460;
-            color: #eaeaea;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.15s;
-        }
-        .send-button:hover:not(:disabled) { background-color: #16213e; }
-        .send-button:disabled, .input-field:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        .modal-overlay.open { display: flex; }
-
-        .modal-content {
-            background-color: #1a1a2e;
-            border: 1px solid #16213e;
-            padding: 2rem;
-            border-radius: 0.75rem;
-            width: 90%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        .modal-content form {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        .modal-content h2 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: #eaeaea;
-        }
-        .modal-input {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #0a0a1a;
-            color: #eaeaea;
-            border: 1px solid #0f3460;
-            border-radius: 0.4rem;
-            outline: none;
-            font-size: 1rem;
-            font-family: monospace;
-        }
-        .modal-input:focus { border-color: #eaeaea; }
-        .modal-button {
-            padding: 0.75rem;
-            background-color: #0f3460;
-            color: #eaeaea;
-            border: none;
-            border-radius: 0.4rem;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.15s;
-        }
-        .modal-button:hover { background-color: #16213e; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+        .chat-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #16213e; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header-buttons { display: flex; gap: 12px; }
+        .header-btn { background: none; border: none; color: #e0e0e0; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+        .header-btn:hover { background: rgba(255,255,255,0.1); }
+        .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        .bubble { max-width: 80%; padding: 12px 16px; border-radius: 16px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; font-size: 15px; }
+        .bubble.user { align-self: flex-end; background: #16213e; border-bottom-right-radius: 4px; }
+        .bubble.assistant { align-self: flex-start; background: #0f3460; border-bottom-left-radius: 4px; }
+        .bubble.error { align-self: flex-start; background: #4a1942; border-bottom-left-radius: 4px; color: #ff9999; }
+        .bubble.loading::after { content: '...'; animation: dots 1s steps(3, end) infinite; }
+        @keyframes dots { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+        .input-bar { display: flex; gap: 8px; padding: 12px 16px; background: #16213e; border-top: 1px solid #0f3460; flex-shrink: 0; }
+        .input-bar textarea { flex: 1; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 12px; padding: 10px 14px; color: #e0e0e0; font-size: 15px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.4; }
+        .input-bar textarea::placeholder { color: #666; }
+        .input-bar button { background: #0f3460; border: none; color: #e0e0e0; border-radius: 12px; padding: 10px 16px; font-size: 15px; cursor: pointer; flex-shrink: 0; }
+        .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .input-bar button:hover:not(:disabled) { background: #1a4a8a; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #16213e; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; }
+        .modal-content h2 { margin-bottom: 16px; font-size: 18px; }
+        .modal-input { width: 100%; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; padding: 10px 12px; color: #e0e0e0; font-size: 15px; font-family: inherit; outline: none; margin-bottom: 12px; }
+        .modal-button { width: 100%; background: #0f3460; border: none; color: #e0e0e0; border-radius: 8px; padding: 10px; font-size: 15px; cursor: pointer; }
+        .modal-button:hover { background: #1a4a8a; }
     </style>
 </head>
 <body>
-
 <div class="chat-container">
-    <header class="app-header">
-        <button class="icon-button" id="clearBtn"    title="Clear chat"    onclick="clearChat()">🗑</button>
-        <button class="icon-button" id="settingsBtn" title="Settings"      onclick="openSettings()">⚙</button>
-    </header>
-
+    <div class="header">
+        <h1>Chat</h1>
+        <div class="header-buttons">
+            <button class="header-btn" onclick="clearChat()" title="Clear chat">&#128465;</button>
+            <button class="header-btn" onclick="openSettings()" title="Settings">&#9881;</button>
+        </div>
+    </div>
     <div class="messages" id="messages"></div>
-
-    <div class="input-container">
-        <input  type="text"  class="input-field"  id="inputField"  placeholder="Type a message…" autocomplete="off">
-        <button class="send-button" id="sendBtn" onclick="sendMessage()">Send</button>
+    <div class="input-bar">
+        <textarea id="input" rows="1" placeholder="Type a message..." onkeydown="handleKey(event)"></textarea>
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
     </div>
 </div>
-
-<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-label="API Key Settings">
+<div class="modal-overlay" id="modalOverlay">
     <div class="modal-content">
-        <h2>⚙ Groq API Key</h2>
+        <h2>&#9881; Gemini API Key</h2>
         <form onsubmit="saveApiKey(); return false;">
-            <input type="password" class="modal-input" id="apiKeyInput" placeholder="gsk_…" autocomplete="current-password" spellcheck="false">
+            <input type="password" class="modal-input" id="apiKeyInput" placeholder="AIza..." autocomplete="off" spellcheck="false">
             <button type="submit" class="modal-button">Save</button>
         </form>
     </div>
 </div>
-
 <script>
-    var conversationHistory = [];
-    var apiKey = localStorage.getItem('groq_api_key') || '';
+var conversationHistory = [];
+var apiKey = localStorage.getItem('gemini_api_key') || '';
+var messagesEl = document.getElementById('messages');
+var inputEl = document.getElementById('input');
+var sendBtn = document.getElementById('sendBtn');
+var modalOverlay = document.getElementById('modalOverlay');
+var apiKeyInput = document.getElementById('apiKeyInput');
 
-    var messagesEl   = document.getElementById('messages');
-    var inputField   = document.getElementById('inputField');
-    var sendBtn      = document.getElementById('sendBtn');
-    var modalOverlay = document.getElementById('modalOverlay');
+if (!apiKey) openSettings();
 
-    if (!apiKey) openSettings();
+function openSettings() {
+    apiKeyInput.value = apiKey;
+    modalOverlay.classList.add('active');
+    apiKeyInput.focus();
+}
 
-    async function sendMessage() {
-        var text = inputField.value.trim();
-        if (!text) return;
-
-        if (!apiKey) {
-            openSettings();
-            return;
-        }
-
-        conversationHistory.push({ role: 'user', content: text });
-        appendBubble('user', text);
-        inputField.value = '';
-
-        var loadingEl = appendLoadingBubble();
-        setInputEnabled(false);
-
-        var messages = [
-            {
-                role: 'system',
-                content: 'You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information.'
-            }
-        ].concat(conversationHistory);
-
-        try {
-            var response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + apiKey,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile',
-                    messages: messages,
-                    temperature: 0.7,
-                    max_completion_tokens: 2048,
-                    stream: false
-                })
-            });
-
-            if (!response.ok) {
-                var errMsg;
-                if (response.status === 429) {
-                    errMsg = 'Rate limit reached — wait a moment and try again.';
-                } else {
-                    try {
-                        var errBody = await response.json();
-                        errMsg = (errBody && errBody.error && errBody.error.message) || ('API error ' + response.status + ': ' + response.statusText);
-                    } catch (e) {
-                        errMsg = 'API error ' + response.status + ': ' + response.statusText;
-                    }
-                }
-                replaceLoadingWithError(loadingEl, errMsg);
-                return;
-            }
-
-            var data = await response.json();
-            var replyContent = data.choices[0].message.content;
-
-            conversationHistory.push({ role: 'assistant', content: replyContent });
-            replaceLoadingWithContent(loadingEl, replyContent);
-
-        } catch (err) {
-            var netMsg;
-            if (err instanceof TypeError) {
-                netMsg = 'Network error — check your connection.';
-            } else {
-                netMsg = 'Unexpected error: ' + err.message;
-            }
-            replaceLoadingWithError(loadingEl, netMsg);
-        } finally {
-            setInputEnabled(true);
-            inputField.focus();
-            scrollToBottom();
-        }
-    }
-
-    function appendBubble(role, content, isError) {
-        var wrapper = document.createElement('div');
-        wrapper.className = 'message-wrapper ' + role;
-
-        var bubble = document.createElement('div');
-        bubble.className = (role === 'user' ? 'user-message' : 'assistant-message') + (isError ? ' error-message' : '');
-        bubble.textContent = content;
-
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
-        scrollToBottom();
-        return wrapper;
-    }
-
-    function appendLoadingBubble() {
-        var wrapper = document.createElement('div');
-        wrapper.className = 'message-wrapper assistant';
-
-        var bubble = document.createElement('div');
-        bubble.className = 'assistant-message';
-        bubble.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
-
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
-        scrollToBottom();
-        return wrapper;
-    }
-
-    function replaceLoadingWithContent(wrapperEl, content) {
-        var bubble = wrapperEl.querySelector('.assistant-message');
-        bubble.textContent = content;
-    }
-
-    function replaceLoadingWithError(wrapperEl, errMsg) {
-        var bubble = wrapperEl.querySelector('.assistant-message');
-        bubble.classList.add('error-message');
-        bubble.textContent = errMsg;
-    }
-
-    function scrollToBottom() {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function setInputEnabled(enabled) {
-        inputField.disabled = !enabled;
-        sendBtn.disabled    = !enabled;
-    }
-
-    function clearChat() {
-        conversationHistory.length = 0;
-        messagesEl.innerHTML = '';
-        inputField.value     = '';
-    }
-
-    function openSettings() {
-        document.getElementById('apiKeyInput').value = apiKey;
-        modalOverlay.classList.add('open');
-        setTimeout(function() { document.getElementById('apiKeyInput').focus(); }, 50);
-    }
-
-    function saveApiKey() {
-        var val = document.getElementById('apiKeyInput').value.trim();
-        if (!val) {
-            alert('Please enter a valid API key.');
-            return;
-        }
+function saveApiKey() {
+    var val = apiKeyInput.value.trim();
+    if (val) {
         apiKey = val;
-        localStorage.setItem('groq_api_key', apiKey);
-        modalOverlay.classList.remove('open');
-        inputField.focus();
+        localStorage.setItem('gemini_api_key', apiKey);
     }
+    modalOverlay.classList.remove('active');
+    inputEl.focus();
+}
 
-    inputField.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
+modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+});
+
+function appendBubble(role, text) {
+    var div = document.createElement('div');
+    div.className = 'bubble ' + role;
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    scrollToBottom();
+    return div;
+}
+
+function appendLoadingBubble() {
+    var div = document.createElement('div');
+    div.className = 'bubble assistant loading';
+    div.textContent = '';
+    messagesEl.appendChild(div);
+    scrollToBottom();
+    return div;
+}
+
+function replaceLoadingWithContent(el, text) {
+    el.classList.remove('loading');
+    el.textContent = text;
+    scrollToBottom();
+}
+
+function replaceLoadingWithError(el, text) {
+    el.classList.remove('loading');
+    el.classList.remove('assistant');
+    el.classList.add('error');
+    el.textContent = text;
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function setInputEnabled(enabled) {
+    inputEl.disabled = !enabled;
+    sendBtn.disabled = !enabled;
+}
+
+function clearChat() {
+    conversationHistory = [];
+    messagesEl.innerHTML = '';
+    inputEl.focus();
+}
+
+function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+}
+
+inputEl.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+async function sendMessage() {
+    var text = inputEl.value.trim();
+    if (!text) return;
+    if (!apiKey) { openSettings(); return; }
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+
+    conversationHistory.push({ role: 'user', parts: [{ text: text }] });
+    appendBubble('user', text);
+    var loadingEl = appendLoadingBubble();
+    setInputEnabled(false);
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+
+    var body = {
+        contents: conversationHistory,
+        systemInstruction: {
+            parts: [{ text: 'You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information.' }]
+        },
+        generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048
         }
-    });
+    };
 
-    document.getElementById('apiKeyInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') saveApiKey();
-        if (e.key === 'Escape') modalOverlay.classList.remove('open');
-    });
+    try {
+        var response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
 
-    (function injectManifest() {
-        var manifest = {
-            name:             'Chat',
-            short_name:       'Chat',
-            start_url:        '.',
-            display:          'standalone',
-            background_color: '#1a1a2e',
-            theme_color:      '#0f3460'
-        };
-        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-        var url  = URL.createObjectURL(blob);
-        var link = document.createElement('link');
-        link.rel   = 'manifest';
-        link.href  = url;
-        document.head.appendChild(link);
-    })();
+        if (!response.ok) {
+            var errData = {};
+            try { errData = await response.json(); } catch(e) {}
+            var errMsg = response.status === 429
+                ? 'Rate limit reached. Wait a moment and try again.'
+                : response.status === 403
+                ? 'API key invalid or access denied. Check key in settings.'
+                : 'API error ' + response.status + ': ' + (errData.error && errData.error.message ? errData.error.message : response.statusText);
+            replaceLoadingWithError(loadingEl, errMsg);
+            conversationHistory.pop();
+            return;
+        }
+
+        var data = await response.json();
+
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            var blockReason = data.candidates && data.candidates[0] && data.candidates[0].finishReason
+                ? data.candidates[0].finishReason
+                : (data.promptFeedback && data.promptFeedback.blockReason ? data.promptFeedback.blockReason : 'unknown');
+            replaceLoadingWithError(loadingEl, 'Response blocked: ' + blockReason);
+            conversationHistory.pop();
+            return;
+        }
+
+        var reply = data.candidates[0].content.parts[0].text;
+        conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+        replaceLoadingWithContent(loadingEl, reply);
+    } catch (err) {
+        var msg = err instanceof TypeError
+            ? 'Network error. Check your connection.'
+            : 'Unexpected error: ' + err.message;
+        replaceLoadingWithError(loadingEl, msg);
+        conversationHistory.pop();
+    } finally {
+        setInputEnabled(true);
+        inputEl.focus();
+        scrollToBottom();
+    }
+}
+
+(function injectManifest() {
+    var manifest = { name: 'Chat', short_name: 'Chat', start_url: '.', display: 'standalone', background_color: '#1a1a2e', theme_color: '#0f3460' };
+    var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+    var link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+})();
 </script>
-
 </body>
 </html>
