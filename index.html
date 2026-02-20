@@ -5,11 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="interactive-widget" content="resizes-content">
     <title>Chat</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }
-        .chat-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+        html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+}
         .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #16213e; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
         .header h1 { font-size: 18px; font-weight: 600; }
         .header-buttons { display: flex; gap: 12px; }
@@ -40,7 +52,7 @@
 <body>
 <div class="chat-container">
     <div class="header">
-        <h1>Chat</h1>
+        <h1>Beat</h1>
         <div class="header-buttons">
             <button class="header-btn" onclick="clearChat()" title="Clear chat">&#128465;</button>
             <button class="header-btn" onclick="openSettings()" title="Settings">&#9881;</button>
@@ -169,7 +181,7 @@ async function sendMessage() {
     var body = {
         contents: conversationHistory,
         systemInstruction: {
-            parts: [{ text: 'You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information.' }]
+            parts: [{ text: 'Your name is Beat. You are the user's personal assistant. When asked who you are, respond: 'I am Beat, your personal assistant, here to help.' Always refer to yourself as Beat.You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information.' }]
         },
         generationConfig: {
             temperature: 0.7,
@@ -225,13 +237,38 @@ async function sendMessage() {
 }
 
 (function injectManifest() {
-    var manifest = { name: 'Chat', short_name: 'Chat', start_url: '.', display: 'standalone', background_color: '#1a1a2e', theme_color: '#0f3460' };
+    var manifest = { name: 'Beat', short_name: 'Beat', start_url: '.', display: 'standalone', background_color: '#1a1a2e', theme_color: '#0f3460' };
     var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
     var link = document.createElement('link');
     link.rel = 'manifest';
     link.href = URL.createObjectURL(blob);
     document.head.appendChild(link);
 })();
+
+(function fixMobileKeyboard() {
+    if (!window.visualViewport) return;
+
+    var container = document.querySelector('.chat-container');
+
+    function onResize() {
+        var vvh = window.visualViewport.height;
+        var vvOffsetTop = window.visualViewport.offsetTop;
+        container.style.height = vvh + 'px';
+        container.style.transform = 'translateY(' + vvOffsetTop + 'px)';
+    }
+
+    window.visualViewport.addEventListener('resize', onResize);
+    window.visualViewport.addEventListener('scroll', onResize);
+
+    // iOS Safari: scroll input into view after keyboard opens
+    var inputEl = document.getElementById('input');
+    inputEl.addEventListener('focusin', function() {
+        setTimeout(function() {
+            inputEl.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        }, 300);
+    });
+})();
+
 </script>
 </body>
 </html>
