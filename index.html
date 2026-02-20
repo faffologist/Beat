@@ -23,6 +23,9 @@
         .bubble.error { align-self: flex-start; background: #4a1942; border-bottom-left-radius: 4px; color: #ff9999; }
         .bubble.loading::after { content: '...'; animation: dots 1s steps(3, end) infinite; }
         @keyframes dots { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+        .bubble .sources { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 12px; color: #999; }
+        .bubble .sources a { color: #7aafff; text-decoration: none; }
+        .bubble .sources a:hover { text-decoration: underline; }
         .attachment-preview { display: none; align-items: center; gap: 8px; padding: 8px 16px; background: #16213e; border-top: 1px solid #0f3460; flex-shrink: 0; }
         .attachment-preview.active { display: flex; }
         .attachment-preview img { max-height: 60px; max-width: 120px; border-radius: 8px; object-fit: cover; }
@@ -78,6 +81,8 @@
     </div>
 </div>
 <script>
+var SYSTEM_INSTRUCTION = "Your name is Beat. You are the user's personal assistant. When asked who you are, respond: \"I am Beat, your personal assistant, here to help.\" Always refer to yourself as Beat. You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information. When you use Google Search to answer a question, mention the key sources naturally in your response. When asked to assess whether a text was written by AI, analyse it for patterns such as: uniform sentence structure, generic phrasing, hedging language, lack of personal voice or typos, overly formal tone, repetitive transition words, lack of specific or personal details, and unusually consistent paragraph length. Provide your assessment with a confidence level (low, medium, or high) and explain your reasoning. Always caveat that AI detection is inherently unreliable and your assessment is an educated guess, not a definitive answer.";
+
 var conversationHistory = [];
 var apiKey = localStorage.getItem('gemini_api_key') || '';
 var messagesEl = document.getElementById('messages');
@@ -175,9 +180,20 @@ function appendLoadingBubble() {
     return div;
 }
 
-function replaceLoadingWithContent(el, text) {
+function replaceLoadingWithContent(el, text, sources) {
     el.classList.remove('loading');
-    el.textContent = text;
+    el.textContent = '';
+    var span = document.createElement('span');
+    span.textContent = text;
+    el.appendChild(span);
+    if (sources && sources.length > 0) {
+        var srcDiv = document.createElement('div');
+        srcDiv.className = 'sources';
+        srcDiv.innerHTML = 'Sources: ' + sources.map(function(s) {
+            return '<a href="' + s.uri + '" target="_blank" rel="noopener">' + (s.title || s.uri) + '</a>';
+        }).join(', ');
+        el.appendChild(srcDiv);
+    }
     scrollToBottom();
 }
 
@@ -217,6 +233,22 @@ inputEl.addEventListener('input', function() {
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
+function extractSources(data) {
+    var sources = [];
+    try {
+        var gm = data.candidates[0].groundingMetadata;
+        if (gm && gm.groundingChunks) {
+            for (var i = 0; i < gm.groundingChunks.length; i++) {
+                var chunk = gm.groundingChunks[i];
+                if (chunk.web) {
+                    sources.push({ uri: chunk.web.uri, title: chunk.web.title || '' });
+                }
+            }
+        }
+    } catch(e) {}
+    return sources;
+}
+
 async function sendMessage() {
     var text = inputEl.value.trim();
     if (!text && !pendingAttachment) return;
@@ -252,8 +284,9 @@ async function sendMessage() {
     var body = {
         contents: conversationHistory,
         systemInstruction: {
-            parts: [{ text: "Your name is Beat. You are the user's personal assistant. When asked who you are, respond: \"I am Beat, your personal assistant, here to help.\" Always refer to yourself as Beat. You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information." }]
+            parts: [{ text: SYSTEM_INSTRUCTION }]
         },
+        tools: [{ googleSearch: {} }],
         generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 2048
@@ -292,8 +325,9 @@ async function sendMessage() {
         }
 
         var reply = data.candidates[0].content.parts[0].text;
+        var sources = extractSources(data);
         conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
-        replaceLoadingWithContent(loadingEl, reply);
+        replaceLoadingWithContent(loadingEl, reply, sources);
     } catch (err) {
         var msg = err instanceof TypeError
             ? 'Network error. Check your connection.'
