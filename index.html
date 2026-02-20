@@ -5,23 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<meta name="interactive-widget" content="resizes-content">
-    <title>Chat</title>
+    <meta name="interactive-widget" content="resizes-content">
+    <title>Beat</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body {
-    height: 100%;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #1a1a2e;
-    color: #e0e0e0;
-}
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-}
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+        .chat-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
         .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #16213e; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
         .header h1 { font-size: 18px; font-weight: 600; }
         .header-buttons { display: flex; gap: 12px; }
@@ -34,12 +23,19 @@
         .bubble.error { align-self: flex-start; background: #4a1942; border-bottom-left-radius: 4px; color: #ff9999; }
         .bubble.loading::after { content: '...'; animation: dots 1s steps(3, end) infinite; }
         @keyframes dots { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
-        .input-bar { display: flex; gap: 8px; padding: 12px 16px; background: #16213e; border-top: 1px solid #0f3460; flex-shrink: 0; }
+        .attachment-preview { display: none; align-items: center; gap: 8px; padding: 8px 16px; background: #16213e; border-top: 1px solid #0f3460; flex-shrink: 0; }
+        .attachment-preview.active { display: flex; }
+        .attachment-preview img { max-height: 60px; max-width: 120px; border-radius: 8px; object-fit: cover; }
+        .attachment-preview .file-name { font-size: 13px; color: #aaa; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .attachment-preview .remove-btn { background: none; border: none; color: #ff9999; font-size: 18px; cursor: pointer; padding: 4px 8px; }
+        .input-bar { display: flex; gap: 8px; padding: 12px 16px; background: #16213e; border-top: 1px solid #0f3460; flex-shrink: 0; align-items: flex-end; }
         .input-bar textarea { flex: 1; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 12px; padding: 10px 14px; color: #e0e0e0; font-size: 15px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.4; }
         .input-bar textarea::placeholder { color: #666; }
         .input-bar button { background: #0f3460; border: none; color: #e0e0e0; border-radius: 12px; padding: 10px 16px; font-size: 15px; cursor: pointer; flex-shrink: 0; }
         .input-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
         .input-bar button:hover:not(:disabled) { background: #1a4a8a; }
+        .attach-btn { background: none !important; border: none; color: #e0e0e0; font-size: 22px; cursor: pointer; padding: 8px; border-radius: 12px; flex-shrink: 0; }
+        .attach-btn:hover { background: rgba(255,255,255,0.1) !important; }
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: #16213e; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; }
@@ -47,6 +43,7 @@
         .modal-input { width: 100%; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; padding: 10px 12px; color: #e0e0e0; font-size: 15px; font-family: inherit; outline: none; margin-bottom: 12px; }
         .modal-button { width: 100%; background: #0f3460; border: none; color: #e0e0e0; border-radius: 8px; padding: 10px; font-size: 15px; cursor: pointer; }
         .modal-button:hover { background: #1a4a8a; }
+        .bubble img.attachment-img { max-width: 100%; max-height: 300px; border-radius: 8px; margin-bottom: 8px; display: block; }
     </style>
 </head>
 <body>
@@ -59,7 +56,14 @@
         </div>
     </div>
     <div class="messages" id="messages"></div>
+    <div class="attachment-preview" id="attachmentPreview">
+        <img id="attachmentThumb" src="" alt="">
+        <span class="file-name" id="attachmentName"></span>
+        <button class="remove-btn" onclick="removeAttachment()" title="Remove">&#10005;</button>
+    </div>
     <div class="input-bar">
+        <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">&#128206;</button>
+        <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.csv,.md" style="display:none" onchange="handleFileSelect(event)">
         <textarea id="input" rows="1" placeholder="Type a message..." onkeydown="handleKey(event)"></textarea>
         <button id="sendBtn" onclick="sendMessage()">Send</button>
     </div>
@@ -81,6 +85,10 @@ var inputEl = document.getElementById('input');
 var sendBtn = document.getElementById('sendBtn');
 var modalOverlay = document.getElementById('modalOverlay');
 var apiKeyInput = document.getElementById('apiKeyInput');
+var attachmentPreview = document.getElementById('attachmentPreview');
+var attachmentThumb = document.getElementById('attachmentThumb');
+var attachmentName = document.getElementById('attachmentName');
+var pendingAttachment = null;
 
 if (!apiKey) openSettings();
 
@@ -104,10 +112,55 @@ modalOverlay.addEventListener('click', function(e) {
     if (e.target === modalOverlay) modalOverlay.classList.remove('active');
 });
 
-function appendBubble(role, text) {
+function handleFileSelect(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+        alert('File must be under 4 MB.');
+        event.target.value = '';
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var dataUrl = e.target.result;
+        var mimeType = file.type || 'application/octet-stream';
+        var base64 = dataUrl.split(',')[1];
+        pendingAttachment = { mimeType: mimeType, base64: base64, name: file.name, dataUrl: dataUrl };
+        attachmentName.textContent = file.name;
+        if (mimeType.startsWith('image/')) {
+            attachmentThumb.src = dataUrl;
+            attachmentThumb.style.display = 'block';
+        } else {
+            attachmentThumb.style.display = 'none';
+        }
+        attachmentPreview.classList.add('active');
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+function removeAttachment() {
+    pendingAttachment = null;
+    attachmentPreview.classList.remove('active');
+    attachmentThumb.src = '';
+    attachmentThumb.style.display = 'none';
+    attachmentName.textContent = '';
+}
+
+function appendBubble(role, text, imageDataUrl) {
     var div = document.createElement('div');
     div.className = 'bubble ' + role;
-    div.textContent = text;
+    if (imageDataUrl) {
+        var img = document.createElement('img');
+        img.className = 'attachment-img';
+        img.src = imageDataUrl;
+        div.appendChild(img);
+    }
+    if (text) {
+        var span = document.createElement('span');
+        span.textContent = text;
+        div.appendChild(span);
+    }
     messagesEl.appendChild(div);
     scrollToBottom();
     return div;
@@ -148,6 +201,7 @@ function setInputEnabled(enabled) {
 function clearChat() {
     conversationHistory = [];
     messagesEl.innerHTML = '';
+    removeAttachment();
     inputEl.focus();
 }
 
@@ -165,19 +219,37 @@ inputEl.addEventListener('input', function() {
 
 async function sendMessage() {
     var text = inputEl.value.trim();
-    if (!text) return;
+    if (!text && !pendingAttachment) return;
     if (!apiKey) { openSettings(); return; }
 
     inputEl.value = '';
     inputEl.style.height = 'auto';
 
-    conversationHistory.push({ role: 'user', parts: [{ text: text }] });
-    appendBubble('user', text);
+    var parts = [];
+    var attachDataUrl = null;
+
+    if (pendingAttachment) {
+        parts.push({ inlineData: { mimeType: pendingAttachment.mimeType, data: pendingAttachment.base64 } });
+        if (pendingAttachment.mimeType.startsWith('image/')) {
+            attachDataUrl = pendingAttachment.dataUrl;
+        }
+    }
+    if (text) {
+        parts.push({ text: text });
+    }
+
+    var userEntry = { role: 'user', parts: parts };
+    conversationHistory.push(userEntry);
+
+    appendBubble('user', text, attachDataUrl);
+    removeAttachment();
+
     var loadingEl = appendLoadingBubble();
     setInputEnabled(false);
 
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
- var body = {
+
+    var body = {
         contents: conversationHistory,
         systemInstruction: {
             parts: [{ text: "Your name is Beat. You are the user's personal assistant. When asked who you are, respond: \"I am Beat, your personal assistant, here to help.\" Always refer to yourself as Beat. You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information." }]
@@ -246,28 +318,21 @@ async function sendMessage() {
 
 (function fixMobileKeyboard() {
     if (!window.visualViewport) return;
-
     var container = document.querySelector('.chat-container');
-
     function onResize() {
         var vvh = window.visualViewport.height;
         var vvOffsetTop = window.visualViewport.offsetTop;
         container.style.height = vvh + 'px';
         container.style.transform = 'translateY(' + vvOffsetTop + 'px)';
     }
-
     window.visualViewport.addEventListener('resize', onResize);
     window.visualViewport.addEventListener('scroll', onResize);
-
-    // iOS Safari: scroll input into view after keyboard opens
-    var inputEl = document.getElementById('input');
     inputEl.addEventListener('focusin', function() {
         setTimeout(function() {
             inputEl.scrollIntoView({ block: 'end', behavior: 'smooth' });
         }, 300);
     });
 })();
-
 </script>
 </body>
 </html>
