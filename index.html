@@ -177,11 +177,10 @@ async function sendMessage() {
     setInputEnabled(false);
 
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
-
-    var body = {
+ var body = {
         contents: conversationHistory,
         systemInstruction: {
-            parts: [{ text: 'Your name is Beat. You are the user's personal assistant. When asked who you are, respond: 'I am Beat, your personal assistant, here to help.' Always refer to yourself as Beat.You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information.' }]
+            parts: [{ text: "Your name is Beat. You are the user's personal assistant. When asked who you are, respond: \"I am Beat, your personal assistant, here to help.\" Always refer to yourself as Beat. You are a helpful, accurate general-knowledge assistant. Answer concisely. If uncertain, say so. Do not fabricate information." }]
         },
         generationConfig: {
             temperature: 0.7,
